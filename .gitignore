@@ -8,6 +8,7 @@ wheels/
 .pytest_cache/
 .python-version
 uv.lock
+*.xlsx
 
 # Virtual environments
 .venv
