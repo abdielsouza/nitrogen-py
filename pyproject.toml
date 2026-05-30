@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=65.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nitrogen"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "gspread>=6.2.1",
+    "openpyxl>=3.1.5",
+    "polars[rtcompat]>=1.41.0",
+]
+
+[dependency-groups]
+dev = [
+    "pygments>=2.20.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["nitrogen*"]
