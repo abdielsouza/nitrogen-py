@@ -12,15 +12,15 @@ else:
 
 class Backend(ABC):
     @abstractmethod
-    def create_sheet(self, sheet: "Type[Sheet]") -> None:
+    def create_sheet(self, sheet: Sheet) -> None:
         """Create a destination sheet (given a Sheet subclass)."""
 
     @abstractmethod
-    def write_column(self, sheet: "Type[Sheet]", column: "Column") -> None:
+    def write_column(self, sheet: Sheet, column: Column) -> None:
         """Write a single column (header + data) for `sheet`."""
 
     @abstractmethod
-    def write_formula(self, sheet: "Type[Sheet]", formula: "Formula") -> None:
+    def write_formula(self, sheet: Sheet, formula: Formula) -> None:
         """Write a formula column for `sheet` (populate cells with formulas)."""
 
     @abstractmethod
