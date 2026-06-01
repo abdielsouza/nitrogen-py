@@ -1,13 +1,13 @@
 from dataclasses import dataclass, field
-from typing import Dict, Optional
+from typing import Dict, Optional, Type
 from .sheet import Sheet
 from nitrogen.backends.base import Backend
 
 @dataclass
 class Workbook:
-    sheets: Dict[str, Sheet] = field(default_factory=dict)
+    sheets: Dict[str, Type[Sheet]] = field(default_factory=dict)
 
-    def add(self, sheet: Sheet):
+    def add(self, sheet: Type[Sheet]):
         self.sheets[sheet.__name__] = sheet
     
     def sync(self, backend: Backend, path: Optional[str] = None):
