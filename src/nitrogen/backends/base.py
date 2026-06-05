@@ -1,6 +1,6 @@
 from abc import ABC
 from abc import abstractmethod
-from typing import Optional, Type, TYPE_CHECKING
+from typing import Optional, Type, Protocol, TYPE_CHECKING
 if TYPE_CHECKING:
     from nitrogen.core import Sheet, Column, Formula
     from nitrogen.core.expressions.base import Expression
@@ -32,3 +32,6 @@ class Compiler(ABC):
     @abstractmethod
     def compile(self, expr: Expression) -> str:
         pass
+
+class IRemoteBehavior(Protocol):
+    def connect(self, **kwargs) -> None: ...

@@ -4,6 +4,8 @@ from .expressions.references import BasicReference
 
 @dataclass
 class Column:
+    """it represents a column header like an entity property on relational databases."""
+
     dtype:      type
     name:       Optional[str] = None
     default:    Any = None

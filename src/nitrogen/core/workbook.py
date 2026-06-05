@@ -5,12 +5,21 @@ from nitrogen.backends.base import Backend
 
 @dataclass
 class Workbook:
+    """
+    The workbook normally represents a kind of workspace where the sheets
+    are contained in.
+    """
+
     sheets: Dict[str, Type[Sheet]] = field(default_factory=dict)
 
     def add(self, sheet: Type[Sheet]):
+        """add a sheet to the workbook."""
+
         self.sheets[sheet.__name__] = sheet
     
     def sync(self, backend: Backend, path: Optional[str] = None):
+        """synchronize the updates in the workbook to the remote location or file path."""
+        
         for sheet in self.sheets.values():
             backend.create_sheet(sheet)
 

@@ -117,6 +117,38 @@ def test_write_column_with_data(backend, sheet_with_data):
         Path(tmp_path).unlink(missing_ok=True)
 
 
+def test_write_formula_column(backend):
+    """Test writing a formula column into an Excel sheet."""
+    class SalesSheet(Sheet):
+        quantity = Column(dtype=int, name="quantity")
+        price = Column(dtype=float, name="price")
+        total = Formula(quantity * price)
+
+    SalesSheet.__rows__ = []
+    SalesSheet.insert(quantity=2, price=10.5)
+    SalesSheet.insert(quantity=3, price=5.0)
+
+    backend.create_sheet(SalesSheet)
+    backend.write_column(SalesSheet, SalesSheet.quantity)
+    backend.write_column(SalesSheet, SalesSheet.price)
+    backend.write_formula(SalesSheet, SalesSheet.total)
+
+    with NamedTemporaryFile(suffix=".xlsx", delete=False) as tmp:
+        tmp_path = tmp.name
+
+    try:
+        backend.save(tmp_path)
+
+        loaded_wb = load_workbook(tmp_path, data_only=False)
+        ws = loaded_wb[SalesSheet.__name__]
+
+        assert ws["C1"].value == "total"
+        assert ws["C2"].value == "=A2*B2"
+        assert ws["C3"].value == "=A3*B3"
+    finally:
+        Path(tmp_path).unlink(missing_ok=True)
+
+
 def test_multiple_sheets(backend, simple_sheet, sheet_with_data):
     """Test creating and writing to multiple sheets."""
     backend.create_sheet(simple_sheet)

@@ -4,6 +4,10 @@ from typing import Optional
 
 @dataclass
 class Formula:
+    """
+    The formula is a dynamic component which value can be auto-updated when
+    the variables change.
+    """
     expr: Expression
     name: Optional[str] = None
 

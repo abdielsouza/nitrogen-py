@@ -3,7 +3,7 @@ from nitrogen.backends.excel.compiler import ExcelCompiler
 from openpyxl import Workbook
 from openpyxl.utils import get_column_letter
 import re
-from typing import Any, Type
+from typing import Type
 from nitrogen.core import Sheet, Column, Formula
 
 
@@ -83,6 +83,8 @@ class ExcelBackend(Backend):
 
                 # write formula into target cell (must start with '=')
                 ws.cell(row=row_number, column=target_col, value=f"={fstr}")
+            else:
+                pass
 
     def save(self, path: str | None = None) -> None:
         if path:

@@ -12,6 +12,7 @@ dependencies = [
     "gspread>=6.2.1",
     "openpyxl>=3.1.5",
     "polars[rtcompat]>=1.41.0",
+    "python-dotenv>=1.2.2",
 ]
 
 [dependency-groups]
