@@ -1,6 +1,7 @@
-from typing import Any, ClassVar, Dict, Tuple, Final
+from typing import Any, ClassVar, Dict, Tuple, Optional
 from .column import Column
 from .formula import Formula
+from .relationship import Relationship
 from .graph.dependency import DependencyGraph
 
 class SheetMeta(type):
@@ -13,6 +14,7 @@ class SheetMeta(type):
     def __new__(cls, name: str, bases: Tuple, attrs: Dict):
         columns = {}
         formulas = {}
+        relationships = {}
         graph = DependencyGraph()
 
         for key, value in attrs.items():
@@ -23,6 +25,10 @@ class SheetMeta(type):
             elif isinstance(value, Formula):
                 value.contribute_to_sheet(key)
                 formulas[key] = value
+
+            elif isinstance(value, Relationship):
+                value.contribute_to_sheet(key)
+                relationships[key] = value
         
         for formula_name, formula in formulas.items():
             for dep in formula.dependencies:
@@ -32,6 +38,7 @@ class SheetMeta(type):
         attrs["__rows__"] = []
         attrs["_columns"] = columns
         attrs["_formulas"] = formulas
+        attrs["_relationships"] = relationships
         attrs["_graph"] = graph
 
         return super().__new__(cls, name, bases, attrs)
@@ -39,11 +46,13 @@ class SheetMeta(type):
 class Sheet(metaclass=SheetMeta):
     """It represents a single sheet or tab inside a workspace."""
 
-    __rows__: ClassVar[list] = []
+    __rows__: ClassVar[list[dict]] = []
 
     _columns:   ClassVar[Dict[str, Any]]    = {}
     _formulas:  ClassVar[Dict[str, Any]]    = {}
     _graph:     ClassVar[DependencyGraph]   = DependencyGraph()
+    
+    _relationships:  ClassVar[Dict[str, Any]]    = {}
 
     @classmethod
     def schema(cls):
@@ -69,3 +78,18 @@ class Sheet(metaclass=SheetMeta):
     def formulas(cls) -> Dict[str, Any]:
         """it returns the sheet formulas."""
         return cls._formulas
+    
+    @classmethod
+    def find(cls, **filters) -> Optional[Dict]:
+        for row in cls.__rows__:
+            matching = True
+
+            for key, value in filters.items():
+                if row.get(key) != value:
+                    matching = False
+                    break
+            
+            if matching:
+                return row
+        
+        return None
