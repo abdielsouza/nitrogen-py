@@ -6,7 +6,6 @@ import re
 from typing import Type
 from nitrogen.core import Sheet, Column, Formula
 
-
 class ExcelBackend(Backend):
     def __init__(self, workbook: Workbook):
         self.__workbook = workbook
