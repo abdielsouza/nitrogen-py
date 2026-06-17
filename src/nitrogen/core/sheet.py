@@ -2,6 +2,7 @@ from typing import Any, ClassVar, Dict, Tuple, Optional
 from .column import Column
 from .formula import Formula
 from .relationship import Relationship
+from .record import Record
 from .graph.dependency import DependencyGraph
 
 class SheetMeta(type):
@@ -80,7 +81,7 @@ class Sheet(metaclass=SheetMeta):
         return cls._formulas
     
     @classmethod
-    def find(cls, **filters) -> Optional[Dict]:
+    def find(cls, **filters) -> Optional[Record]:
         for row in cls.__rows__:
             matching = True
 
@@ -90,6 +91,27 @@ class Sheet(metaclass=SheetMeta):
                     break
             
             if matching:
-                return row
+                return Record(cls, row)
         
         return None
+    
+    @classmethod
+    def all(cls):
+        return [Record(cls, row) for row in cls.__rows__]
+
+    @classmethod
+    def filter(cls, **filters) -> list[Record]:
+        results = []
+
+        for row in cls.__rows__:
+            matching = True
+
+            for key, value in filters.items():
+                if row.get(key) != value:
+                    matching = False
+                    break
+
+            if matching:
+                results.append(Record(cls, row))
+        
+        return results

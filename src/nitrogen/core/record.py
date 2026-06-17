@@ -1,8 +1,13 @@
-from typing import Type, Dict
-from .sheet import Sheet
+from __future__ import annotations
+
+from typing import Type, Dict, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .sheet import Sheet
+
 
 class Record:
-    def __init__(self, sheet: Type[Sheet], data: Dict):
+    def __init__(self, sheet: Type["Sheet"], data: Dict):
         self._sheet = sheet
         self._data = data
     

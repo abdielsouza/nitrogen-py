@@ -3,7 +3,8 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .sheet import Sheet
-    from typing import Type
+    from .record import Record
+    from typing import Type, Optional
 
 class Relationship:
     def __init__(self, target: Type[Sheet], local_key: str, remote_key: str = "id"):
@@ -15,7 +16,7 @@ class Relationship:
     def contribute_to_sheet(self, name: str):
         self._name = name
 
-    def resolve(self, row: dict):
+    def resolve(self, row: dict) -> Optional[Record]:
         value = row.get(self._local_key)
 
         return self._target.find(**{self._remote_key: value})
