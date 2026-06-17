@@ -10,6 +10,13 @@ class GoogleSheetsBackend(Backend):
         if creds_path is not None and spreadsheet_name is not None:
             self.__gc = gspread.service_account(creds_path)
             self.__spreadsheet = self.__gc.open(spreadsheet_name)
+        else:
+            raise ValueError(
+                """
+                you must provide the credentials file path and the spreadsheet name
+                for the google sheets backend.
+                """
+            )
         
         self.__compiler = GoogleSheetsCompiler()
     
