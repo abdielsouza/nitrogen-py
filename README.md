@@ -10,6 +10,16 @@ Key features
 - Build formula expressions using Python operators (`+`, `-`, `*`, `/`) on column references.
 - Automatic dependency graph generation and execution ordering for formula evaluation.
 - Pluggable backend system (example: Excel backend using `openpyxl`).
+- Synchronization engine with external data sources, like Postgres or SQLite.
+
+Project modules
+---------------
+The framework is divided into many small modules to separate features and responsibilities.
+
+- `core`: The fundamental pillars of the library are located here. It contains the main structures and functionalities of the framework.
+- `backends`: The backends for different spreadsheet platforms, like Excel and Google Sheets.
+- `engine`: The synchronization engine that allows the information of spreadsheets to be sent to external data sources.
+- `cli`: The command-line tools to use the Nitrogen framework as executable.
 
 Installation
 ------------
