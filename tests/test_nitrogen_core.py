@@ -24,3 +24,9 @@ def test_core(subtests: Subtests):
     with subtests.test("test for relationships"):
         Products.insert(id="soap", quantity=4, price=3.50)
         Users.insert(name="john", product_id="soap")
+
+    with subtests.test("'filter' and 'all' functions"):
+        Products.insert(id="rice", quantity=10, price=4.00)
+        Products.insert(id="beans", quantity=15, price=4.00)
+
+        assert len(Products.filter(price=4.00)) == 2
