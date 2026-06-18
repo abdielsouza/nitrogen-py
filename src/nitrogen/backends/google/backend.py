@@ -3,6 +3,8 @@ from nitrogen.backends.google.compiler import GoogleSheetsCompiler
 import gspread
 
 class GoogleSheetsBackend(Backend):
+    """The backend for Google Sheets"""
+
     def __init__(self, **kwargs):
         creds_path: str | None = kwargs.get("credentials")
         spreadsheet_name: str | None = kwargs.get("spreadsheet")
