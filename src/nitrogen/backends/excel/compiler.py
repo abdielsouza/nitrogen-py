@@ -8,7 +8,7 @@ from nitrogen.core.expressions.arithmethic import (
 )
 
 class ExcelCompiler(Compiler):
-    def compile(self, expr):
+    def compile(self, expr) -> str:
         if isinstance(expr, BasicReference):
             return expr.name
         

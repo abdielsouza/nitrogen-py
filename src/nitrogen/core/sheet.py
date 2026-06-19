@@ -12,7 +12,7 @@ class SheetMeta(type):
     Python classes.
     """
 
-    def __new__(cls, name: str, bases: Tuple, attrs: Dict):
+    def __new__(cls, name: str, bases: Tuple, attrs: Dict, **kwargs):
         columns = {}
         formulas = {}
         relationships = {}
@@ -41,6 +41,7 @@ class SheetMeta(type):
         attrs["_formulas"] = formulas
         attrs["_relationships"] = relationships
         attrs["_graph"] = graph
+        attrs["__sheet_name__"] = kwargs.get("alt_name", name)
 
         return super().__new__(cls, name, bases, attrs)
 
@@ -48,6 +49,7 @@ class Sheet(metaclass=SheetMeta):
     """It represents a single sheet or tab inside a workspace."""
 
     __rows__: ClassVar[list[dict]] = []
+    __sheet_name__: Optional[str] = None #: the custom sheet name
 
     _columns:   ClassVar[Dict[str, Any]]    = {}
     _formulas:  ClassVar[Dict[str, Any]]    = {}
@@ -56,9 +58,21 @@ class Sheet(metaclass=SheetMeta):
     _relationships:  ClassVar[Dict[str, Any]]    = {}
 
     @classmethod
+    def default_name(cls):
+        if not cls.__sheet_name__:
+            return cls.__name__
+        
+        return cls.__sheet_name__
+
+    @classmethod
     def schema(cls):
         """it returns a single schema with information about columns and formulas in the sheet."""
         return {"columns": cls._columns, "formulas": cls._formulas}
+
+    @classmethod
+    def sheet_name(cls) -> str:
+        """Returns the configured sheet name or the class name by default."""
+        return getattr(cls, "__sheet_name__", cls.__name__)
     
     @classmethod
     def insert(cls, **kwargs):

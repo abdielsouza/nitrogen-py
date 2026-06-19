@@ -19,11 +19,26 @@ def test_core(subtests: Subtests):
     with subtests.test("get graph properties"):
         print(f"\n{Products.graph().nodes}")
         print(f"\n{Products.graph().execution_order()}")
-        print(f"\n{Products.graph().affected_by("quantity")}")
+        print(f"\n{Products.graph().affected_by(\"quantity\")}")
+
+    with subtests.test("formula compile"):
+        from nitrogen.backends.excel.compiler import ExcelCompiler
+
+        assert Products.total.name == "total"
+        assert Products.total.dependencies == {"quantity", "price"}
+        assert Products.total.compile(ExcelCompiler()) == "quantity*price"
 
     with subtests.test("test for relationships"):
         Products.insert(id="soap", quantity=4, price=3.50)
         Users.insert(name="john", product_id="soap")
+
+    with subtests.test("custom sheet name"):
+        class Students(nt.Sheet, name="Registro de Alunos"):
+            id = nt.Column(str)
+            name = nt.Column(str)
+
+        assert Students.sheet_name() == "Registro de Alunos"
+        assert Students.__sheet_name__ == "Registro de Alunos"
 
     with subtests.test("'filter' and 'all' functions"):
         Products.insert(id="rice", quantity=10, price=4.00)

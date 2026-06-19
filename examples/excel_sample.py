@@ -3,7 +3,7 @@ import nitrogen.core as nt
 from nitrogen.backends.excel.backend import ExcelBackend
 from nitrogen.core.workbook import Workbook as NitrogenWorkbook
 
-class Products(nt.Sheet):
+class Products(nt.Sheet, alt_name="Tabela de Produtos"):
 	quantity = nt.Column(int)
 	price = nt.Column(float)
 	total = nt.Formula(quantity * price)

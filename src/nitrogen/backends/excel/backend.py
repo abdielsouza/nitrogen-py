@@ -13,10 +13,10 @@ class ExcelBackend(Backend):
 
     def create_sheet(self, sheet: Type[Sheet]) -> None:
         # create the worksheet for the Sheet subclass
-        self.__workbook.create_sheet(title=sheet.__name__)
+        self.__workbook.create_sheet(title=sheet.default_name())
 
     def write_column(self, sheet: Type[Sheet], column: Column) -> None:
-        ws = self.__workbook[sheet.__name__]
+        ws = self.__workbook[sheet.default_name()]
 
         # find next empty column in header (row 1)
         col_idx = 1
@@ -33,57 +33,51 @@ class ExcelBackend(Backend):
             ws.cell(row=2 + row_idx, column=col_idx, value=value)
 
     def write_formula(self, sheet: Type[Sheet], formula: Formula) -> None:
-        ws = self.__workbook[sheet.__name__]
+        ws = self.__workbook[sheet.default_name()]
 
-        # compiled formula uses column names (e.g. "col_a+col_b")
-        compiled = self.__compiler.compile(formula.expr)
+        if formula.name is None:
+            raise ValueError("formula name cannot be null.")
 
-        # build header map: name -> column index
+        compiled = formula.compile(self.__compiler)
+        if not isinstance(compiled, str):
+            compiled = str(compiled)
+
         header_map: dict[str, int] = {}
-
         for idx, cell in enumerate(ws[1], start=1):
             if cell.value is not None:
                 header_map[str(cell.value)] = idx
 
-        # ensure formula column exists in header
-        if formula.name is not None:
-            target_col = header_map.get(formula.name)
+        target_col = header_map.get(formula.name)
+        if target_col is None:
+            target_col = 1
+            while ws.cell(row=1, column=target_col).value is not None:
+                target_col += 1
 
-            if target_col is None:
-                # find next empty column
-                target_col = 1
+            ws.cell(row=1, column=target_col, value=formula.name)
+            header_map[formula.name] = target_col
 
-                while ws.cell(row=1, column=target_col).value is not None:
-                    target_col += 1
+        names = [name for name in header_map.keys() if name != formula.name]
+        names.sort(key=len, reverse=True)
 
-                ws.cell(row=1, column=target_col, value=formula.name)
-                header_map[formula.name] = target_col
+        rows = getattr(sheet, "__rows__", [])
+        for row_idx, _ in enumerate(rows):
+            row_number = 2 + row_idx
+            formula_text = compiled
 
-            # prepare list of names to replace, sort by length desc to avoid partial matches
-            names = [n for n in header_map.keys() if n != formula.name]
-            names.sort(key=len, reverse=True)
+            for name in names:
+                col_idx = header_map.get(name)
+                if col_idx is None:
+                    continue
 
-            rows = getattr(sheet, "__rows__", [])
-
-            for row_idx, _ in enumerate(rows):
-                row_number = 2 + row_idx
-                fstr = compiled
-
-                for name in names:
-                    col_idx = header_map.get(name)
-
-                    if col_idx is None:
-                        continue
-
-                    col_letter = get_column_letter(col_idx)
-                    
-                    # replace whole-word occurrences of the column name with the cell reference
-                    fstr = re.sub(r"\b" + re.escape(name) + r"\b", f"{col_letter}{row_number}", fstr)
-
-                # write formula into target cell (must start with '=')
-                ws.cell(row=row_number, column=target_col, value=f"={fstr}")
-            else:
-                pass
+                col_letter = get_column_letter(col_idx)
+                formula_text = re.sub(
+                    r"(?<![A-Za-z0-9_])" + re.escape(name) + r"(?![A-Za-z0-9_])",
+                    f"{col_letter}{row_number}",
+                    formula_text,
+                )
+            
+            formula_value = formula_text if formula_text.startswith("=") else f"={formula_text}"
+            ws.cell(row=row_number, column=target_col, value=formula_value)
 
     def save(self, path: str | None = None) -> None:
         if path:
