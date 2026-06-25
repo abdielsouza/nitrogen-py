@@ -5,7 +5,6 @@ from typing import Type, Dict, TYPE_CHECKING
 if TYPE_CHECKING:
     from .sheet import Sheet
 
-
 class Record:
     def __init__(self, sheet: Type["Sheet"], data: Dict):
         self._sheet = sheet

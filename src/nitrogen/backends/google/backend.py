@@ -1,9 +1,11 @@
 from nitrogen.backends.base import Backend
 from nitrogen.backends.google.compiler import GoogleSheetsCompiler
-from typing import Optional, Type, TYPE_CHECKING
+from typing import Any, Optional, Type, TYPE_CHECKING
 import gspread
 import re
 import logging
+
+from nitrogen.core import Sheet
 
 if TYPE_CHECKING:
     from nitrogen.core import Sheet, Column, Formula
@@ -41,9 +43,17 @@ class GoogleSheetsBackend(Backend):
         
         self.__compiler = GoogleSheetsCompiler()
         self.__header_cache: dict[str, dict[str, int]] = {}  # sheet_name -> {column_name: col_idx}
+        self.__data_rescue_lock = False
+
+    @property
+    def data_rescue_lock(self):
+        return self.__data_rescue_lock
+    
+    def disable_data_rescue_lock(self):
+        if self.__data_rescue_lock is True:
+            self.__data_rescue_lock = False
     
     def create_sheet(self, sheet: Type[Sheet]) -> None:
-        """Create a worksheet for the given sheet class."""
         sheet_name = sheet.default_name()
 
         try:
@@ -60,9 +70,53 @@ class GoogleSheetsBackend(Backend):
                 logger.warning(f"Worksheet '{sheet_name}' already exists")
             else:
                 raise RuntimeError(f"Failed to create worksheet '{sheet_name}': {e}") from e
+    
+    def rescue_sheet(self, sheet: type[Sheet]) -> None:
+        sheet_name = sheet.default_name()
+
+        try:
+            ws = self.__spreadsheet.worksheet(sheet_name)
+            self.__data_rescue_lock = True
+        except gspread.exceptions.WorksheetNotFound:
+            self.create_sheet(sheet)
+            return
+
+        headers = ws.row_values(1)
+        if not headers:
+            logger.warning(f"No headers found in worksheet '{sheet_name}'")
+            sheet.__rows__ = []
+            self.__header_cache[sheet_name] = {}
+            return
+
+        header_map = {
+            header: idx for idx, header in enumerate(headers, start=1) if header
+        }
+        self.__header_cache[sheet_name] = header_map
+
+        rows = []
+        try:
+            all_values = ws.get_all_values()
+        except AttributeError:
+            all_values = [headers]
+            row_index = 2
+            while True:
+                row_values = ws.row_values(row_index)
+                if not row_values:
+                    break
+                all_values.append(row_values)
+                row_index += 1
+
+        for row_values in all_values[1:]:
+            row = {}
+            for idx, header in enumerate(headers):
+                row[header] = row_values[idx] if idx < len(row_values) else None
+            if any(value not in (None, "") for value in row.values()):
+                rows.append(row)
+
+        sheet.__rows__ = rows
+        logger.info(f"Rescued worksheet '{sheet_name}' with {len(rows)} rows")
 
     def write_column(self, sheet: Type[Sheet], column) -> None:
-        """Write a column (header + data) to the worksheet."""
         if not column.name:
             raise ValueError("column.name cannot be null or empty")
         
@@ -107,7 +161,6 @@ class GoogleSheetsBackend(Backend):
             raise RuntimeError(f"Failed to write column '{column.name}': {e}") from e
     
     def write_formula(self, sheet: Type[Sheet], formula) -> None:
-        """Write a formula column to the worksheet."""
         if not formula.name:
             raise ValueError("formula.name cannot be null or empty")
         
@@ -180,7 +233,6 @@ class GoogleSheetsBackend(Backend):
             raise RuntimeError(f"Failed to write formula '{formula.name}': {e}") from e
     
     def save(self, path: Optional[str] = None) -> None:
-        """Save the spreadsheet (no-op for Google Sheets as it auto-saves)."""
         logger.info("Google Sheets auto-saves changes")
     
     def _get_header_map(self, sheet_name: str, ws) -> dict[str, int]:

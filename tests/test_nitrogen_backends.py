@@ -11,6 +11,9 @@ from nitrogen.core import Column, Formula, Sheet
 from nitrogen.core.expressions.base import Expression
 from nitrogen.core.expressions.references import BasicReference
 from nitrogen.backends.excel.backend import ExcelBackend
+from nitrogen.backends.google.backend import GoogleSheetsBackend
+from nitrogen.backends.google.compiler import GoogleSheetsCompiler
+import gspread
 
 
 # ============================================================================
@@ -147,6 +150,45 @@ def test_write_formula_column(backend):
         assert ws["C3"].value == "=A3*B3"
     finally:
         Path(tmp_path).unlink(missing_ok=True)
+
+
+def test_rescue_sheet_populates_rows_from_existing_google_sheet():
+    class RescuedSheet(Sheet):
+        name = Column(dtype=str, name="name")
+        age = Column(dtype=int, name="age")
+
+    RescuedSheet.__rows__ = []
+
+    class FakeWorksheet:
+        def row_values(self, row):
+            return ["name", "age"] if row == 1 else []
+
+        def get_all_values(self):
+            return [["name", "age"], ["Alice", "30"], ["Bob", "25"]]
+
+    class FakeSpreadsheet:
+        def __init__(self, worksheet):
+            self._worksheet = worksheet
+
+        def worksheet(self, name):
+            if name == RescuedSheet.default_name():
+                return self._worksheet
+            raise gspread.exceptions.WorksheetNotFound
+
+    backend = GoogleSheetsBackend.__new__(GoogleSheetsBackend)
+    backend._GoogleSheetsBackend__spreadsheet = FakeSpreadsheet(FakeWorksheet())
+    backend._GoogleSheetsBackend__compiler = GoogleSheetsCompiler()
+    backend._GoogleSheetsBackend__header_cache = {}
+
+    backend.rescue_sheet(RescuedSheet)
+
+    assert RescuedSheet.__rows__ == [
+        {"name": "Alice", "age": "30"},
+        {"name": "Bob", "age": "25"},
+    ]
+    assert backend._GoogleSheetsBackend__header_cache == {
+        "RescuedSheet": {"name": 1, "age": 2}
+    }
 
 
 def test_multiple_sheets(backend, simple_sheet, sheet_with_data):

@@ -21,12 +21,16 @@ class Workbook:
         """synchronize the updates in the workbook to the remote location or file path."""
         
         for sheet in self.sheets.values():
-            backend.create_sheet(sheet)
+            backend.rescue_sheet(sheet)
 
-            for col in sheet.columns().values():
-                backend.write_column(sheet, col)
-            
-            for formula in sheet.formulas().values():
-                backend.write_formula(sheet, formula)
-            
-        backend.save(path)
+            if not backend.data_rescue_lock:
+                for col in sheet.columns().values():
+                    backend.write_column(sheet, col)
+                
+                for formula in sheet.formulas().values():
+                    backend.write_formula(sheet, formula)
+        
+        try:
+            backend.save(path)
+        finally:
+            backend.disable_data_rescue_lock()

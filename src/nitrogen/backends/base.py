@@ -11,12 +11,32 @@ else:
 
 
 class Backend(ABC):
+    @property
+    @abstractmethod
+    def data_rescue_lock(self) -> bool:
+        pass
+
+    @abstractmethod
+    def disable_data_rescue_lock(self):
+        pass
+
     @abstractmethod
     def create_sheet(self, sheet: Type[Sheet]) -> None:
         """Create a destination sheet (given a Sheet subclass).
 
         Args:
             sheet (Type[Sheet]): The sheet object to create in the platform.
+        
+        Returns:
+            None
+        """
+    
+    @abstractmethod
+    def rescue_sheet(self, sheet: Type[Sheet]) -> None:
+        """Rescue an existent sheet from the platform (given a Sheet subclass).
+
+        Args:
+            sheet (Type[Sheet]): The sheet object to rescue from the platform.
         
         Returns:
             None

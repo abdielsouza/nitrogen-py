@@ -1,18 +1,20 @@
 import nitrogen.core as nt
 from nitrogen.backends import GoogleSheetsBackend
 
-class Students(nt.Sheet, name="Registro de Alunos"):
-    id = nt.Column(str)
-    name = nt.Column(str, name="nome")
-    birthday = nt.Column(str, name="aniversário")
+class Students(nt.Sheet, alt_name="Registro de Alunos"):
+    id = nt.Column(str, name="ID")
+    name = nt.Column(str, name="Nome")
+    birthday = nt.Column(str, name="Aniversário")
 
-Students.insert(id="001144", name="Anna Clara", birthday="00/00/00")
+Students.insert(id="014999", name="Carlos Eduardo", birthday="12/12")
 
 backend = GoogleSheetsBackend(
-    credentials="./credentials.json",
+    credentials="examples/credentials.json",
     spreadsheet="Controle de Classe - Nível 4"
 )
 
 nwb = nt.Workbook()
 nwb.add(Students)
 nwb.sync(backend)
+
+print(Students.schema())

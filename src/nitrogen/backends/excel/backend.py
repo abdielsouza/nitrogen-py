@@ -10,10 +10,21 @@ class ExcelBackend(Backend):
     def __init__(self, workbook: Workbook):
         self.__workbook = workbook
         self.__compiler = ExcelCompiler()
+        self.__data_rescue_lock = False
 
     def create_sheet(self, sheet: Type[Sheet]) -> None:
         # create the worksheet for the Sheet subclass
         self.__workbook.create_sheet(title=sheet.default_name())
+    
+    def rescue_sheet(self, sheet) -> None:
+        return super().rescue_sheet(sheet) # TODO: override this
+
+    @property
+    def data_rescue_lock(self) -> bool:
+        return super().data_rescue_lock # TODO: override this
+
+    def disable_data_rescue_lock(self):
+        return super().disable_data_rescue_lock() # TODO: override this
 
     def write_column(self, sheet: Type[Sheet], column: Column) -> None:
         ws = self.__workbook[sheet.default_name()]

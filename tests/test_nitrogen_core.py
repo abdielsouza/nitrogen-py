@@ -19,7 +19,7 @@ def test_core(subtests: Subtests):
     with subtests.test("get graph properties"):
         print(f"\n{Products.graph().nodes}")
         print(f"\n{Products.graph().execution_order()}")
-        print(f"\n{Products.graph().affected_by(\"quantity\")}")
+        print(f"\n{Products.graph().affected_by('quantity')}")
 
     with subtests.test("formula compile"):
         from nitrogen.backends.excel.compiler import ExcelCompiler
@@ -45,3 +45,6 @@ def test_core(subtests: Subtests):
         Products.insert(id="beans", quantity=15, price=4.00)
 
         assert len(Products.filter(price=4.00)) == 2
+
+def test_relationship_between_sheets():
+    pass
