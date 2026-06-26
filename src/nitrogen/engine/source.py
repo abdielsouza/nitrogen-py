@@ -5,17 +5,14 @@ from .query import Query
 
 class DataSource(ABC):
     @abstractmethod
-    def fetch(self, query: Query) -> Any:
-        pass
+    def execute(self, query: Query) -> Any:
+        """
+        Send the query to an appropriated compiler and return the result.
 
-    @abstractmethod
-    def insert(self, query: Query) -> Any:
-        pass
+        :param query: The query instance.
+        :type query: Query
 
-    @abstractmethod
-    def update(self, query: Query) -> Any:
-        pass
-
-    @abstractmethod
-    def delete(self, query: Query) -> Any:
+        :returns: Anything.
+        :rtype: Any
+        """
         pass

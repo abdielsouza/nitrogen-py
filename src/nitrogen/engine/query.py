@@ -18,7 +18,7 @@ class Operator(Enum):
     CONTAINS    = "CONTAINS"
 
 class Query:
-    pass
+    sheet: str
 
 @dataclass
 class Filter:
@@ -85,6 +85,14 @@ class QueryBuilder:
         builder._sheet = sheet
 
         return builder
+
+    @classmethod
+    def delete(cls, sheet: str):
+        builder = cls()
+        builder._query_type = QueryType.DELETE
+        builder._sheet = sheet
+
+        return builder
     
     def select(self, *fields: str):
         self._fields.extend(fields)
@@ -127,6 +135,12 @@ class QueryBuilder:
                 return UpdateQuery(
                     sheet=cast(str, self._sheet),
                     registry=self._registry,
+                    filters=self._filters,
+                )
+
+            case QueryType.DELETE:
+                return DeleteQuery(
+                    sheet=cast(str, self._sheet),
                     filters=self._filters,
                 )
             

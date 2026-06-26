@@ -21,12 +21,12 @@ class SQLAlchemyCompiler(QueryCompiler[SQLAlchemyContext]):
 
         for filter in query.filters:
             stmt = stmt.where(self._compile_filter(table, filter))
-
-        if query.group_by is not None:
-            stmt = stmt.group_by(query.group_by)
         
         if query.order_by is not None:
             stmt = stmt.order_by(query.order_by)
+        
+        if query.group_by is not None:
+            stmt = stmt.group_by(query.group_by)
         
         return stmt
     

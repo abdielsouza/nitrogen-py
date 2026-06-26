@@ -4,17 +4,112 @@ from nitrogen.engine.query import (
     FetchQuery,
     InsertQuery,
     UpdateQuery,
-    DeleteQuery
+    DeleteQuery,
+    Filter,
+    Operator,
 )
 from openpyxl.worksheet.worksheet import Worksheet
-import openpyxl as xl
+from typing import Callable, Any, cast
+from collections import defaultdict
 
 class ExcelCompiler(QueryCompiler[ExcelContext]):
     def compile(self, query, context):
         if isinstance(query, FetchQuery):
             return self._compile_fetch(query, context.worksheet)
+        elif isinstance(query, InsertQuery):
+            return self._compile_insert(query, context.worksheet)
+        elif isinstance(query, UpdateQuery):
+            return self._compile_update(query, context.worksheet)
         else:
             raise ValueError("unsupported query type")
     
     def _compile_fetch(self, query: FetchQuery, worksheet: Worksheet):
-        pass
+        rows = list(worksheet.iter_rows(values_only=True))
+
+        if not rows:
+            return []
+        
+        headers = rows[0]
+        records = []
+
+        for row in rows[1:]:
+            record = dict(zip(headers, row))
+            records.append(record)
+        
+        for filter_ in query.filters:
+            predicate = self._compile_filter(filter_)
+            records = list(filter(predicate, records))
+        
+        if query.fields:
+            records = [{k: record[k] for k in query.fields if k in record} for record in records]
+        
+        if query.order_by:
+            order_by = query.order_by
+            records.sort(key=lambda r: r[order_by])
+        
+        return records
+
+    def _compile_insert(self, query: InsertQuery, worksheet: Worksheet):
+        headers = [
+            cell.value for cell in worksheet[1]
+        ]
+
+        row = [
+            query.registry.get(str(column)) for column in headers
+        ]
+
+        worksheet.append(row)
+
+    def _compile_update(self, query: UpdateQuery, worksheet: Worksheet):
+        headers = [cell.value for cell in worksheet[1]]
+
+        for row in worksheet.iter_rows(min_row=2):
+            record = {headers[i]: row[i].value for i in range(len(headers))}
+            record = cast(dict[str, Any], record)
+
+            if all(self._compile_filter(f)(record) for f in query.filters):
+                for i, column in enumerate(headers):
+                    if column in query.registry:
+                        row[i].value = query.registry[str(column)]
+    
+    def _compile_delete(self, query: DeleteQuery, worksheet: Worksheet):
+        rows_to_delete = []
+        headers = [cell.value for cell in worksheet[1]]
+
+        for index, row in enumerate(worksheet.iter_rows(min_row=2), start=2):
+            record = {headers[i]: row[i] for i in range(len(headers))}
+            record = cast(dict[str, Any], record)
+
+            if all(self._compile_filter(f)(record) for f in query.filters):
+                rows_to_delete.append(index)
+        
+        for index in reversed(rows_to_delete):
+            worksheet.delete_rows(index)
+    
+    def _compile_filter(self, filter: Filter) -> Callable[[dict[str, Any]], bool]:
+        match filter.operator:
+            case Operator.EQ:
+                return lambda r: r[filter.field] == filter.value
+            
+            case Operator.GT:
+                return lambda r: r[filter.field] > filter.value
+            
+            case Operator.LT:
+                return lambda r: r[filter.field] < filter.value
+            
+            case Operator.GTE:
+                return lambda r: r[filter.field] >= filter.value
+            
+            case Operator.LTE:
+                return lambda r: r[filter.field] <= filter.value
+            
+            case _:
+                raise ValueError("unsupported operator")
+    
+    def _compile_group_by(self, records: list[dict], field: str):
+        groups = defaultdict(list)
+
+        for row in records:
+            groups[row[field]].append(row)
+        
+        return dict(groups)
