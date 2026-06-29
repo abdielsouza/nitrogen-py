@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Any
 import sqlalchemy as sql
 from openpyxl.worksheet.worksheet import Worksheet
 
@@ -35,3 +36,5 @@ class GoogleSheetsContext(CompilationContext):
     """Implementation of CompilationContext for Google Sheets."""
 
     spreadsheet_id: str
+    worksheet: Any
+    spreadsheet: Any

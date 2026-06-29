@@ -2,7 +2,6 @@ from dataclasses import dataclass
 from typing import Optional
 from .expressions.base import Expression
 from .column import Column
-from .expressions.references import BasicReference
 
 @dataclass
 class Formula:

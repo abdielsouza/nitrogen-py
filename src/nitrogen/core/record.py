@@ -20,3 +20,14 @@ class Record:
             return rel.resolve(self._data)
 
         raise AttributeError
+
+    def __getitem__(self, item: str):
+        if item in self._data:
+            return self._data[item]
+        
+        rel = self._sheet._relationships.get(item)
+
+        if rel:
+            return rel.resolve(self._data)
+
+        raise AttributeError

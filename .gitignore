@@ -16,4 +16,5 @@ uv.lock
 # others
 examples/*.json
 **/*.lock
-rust/
+**/target
+modules/

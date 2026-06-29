@@ -1,7 +1,6 @@
 from dataclasses import dataclass, field
-from typing import Dict, Optional, Type
+from typing import Dict, Type, Optional
 from .sheet import Sheet
-from nitrogen.backends.base import Backend
 
 @dataclass
 class Workbook:
@@ -12,25 +11,14 @@ class Workbook:
 
     sheets: Dict[str, Type[Sheet]] = field(default_factory=dict)
 
-    def add(self, sheet: Type[Sheet]):
-        """add a sheet to the workbook."""
-
-        self.sheets[sheet.__name__] = sheet
+    def add_sheet(self, sheet: Type[Sheet]) -> None:
+        self.sheets[sheet.default_name()] = sheet
     
-    def sync(self, backend: Backend, path: Optional[str] = None):
-        """synchronize the updates in the workbook to the remote location or file path."""
-        
-        for sheet in self.sheets.values():
-            backend.rescue_sheet(sheet)
+    def pop_sheet(self, sheet_name: str) -> Optional[Type[Sheet]]:
+        return self.sheets.pop(sheet_name, None)
 
-            if not backend.data_rescue_lock:
-                for col in sheet.columns().values():
-                    backend.write_column(sheet, col)
-                
-                for formula in sheet.formulas().values():
-                    backend.write_formula(sheet, formula)
-        
-        try:
-            backend.save(path)
-        finally:
-            backend.disable_data_rescue_lock()
+    def get_sheet(self, sheet_name: str) -> Optional[Type[Sheet]]:
+        return self.sheets.get(sheet_name)
+
+    def __iter__(self):
+        return iter(self.sheets.values())

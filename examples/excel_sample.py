@@ -1,21 +1,21 @@
-import openpyxl
 import nitrogen.core as nt
-from nitrogen.backends.excel.backend import ExcelBackend
-from nitrogen.core.workbook import Workbook as NitrogenWorkbook
+import nitrogen.engine as nte
+from typing import Literal
 
-class Products(nt.Sheet, alt_name="Tabela de Produtos"):
-	quantity = nt.Column(int)
-	price = nt.Column(float)
-	total = nt.Formula(quantity * price)
+class Users(nt.Sheet):
+    type Role = Literal["visitant", "member", "admin"]
 
-# insert rows
-Products.insert(quantity=2, price=3.5)
-Products.insert(quantity=10, price=1.2)
+    id = nt.Column(int)
+    name = nt.Column(str)
+    email = nt.Column(str)
+    role = nt.Column(type[Role])
 
-# write to an Excel workbook using the provided backend
-wb = openpyxl.Workbook()
-backend = ExcelBackend(wb)
+workbook = nt.Workbook()
+source = nte.ExcelDataSource("excel_sample.xlsx")
+engine = nte.WorkbookEngine(source)
 
-nwb = NitrogenWorkbook()
-nwb.add(Products)
-nwb.sync(backend, path="products.xlsx")
+Users.insert(id=1, name="john", email="johnnymail@hotmail.com", role="member")
+Users.insert(id=2, name="anna", email="annagirlly@hotmail.com", role="admin")
+
+workbook.add_sheet(Users)
+engine.save(workbook)

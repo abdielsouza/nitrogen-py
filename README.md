@@ -1,4 +1,3 @@
-
 Nitrogen
 ========
 
@@ -6,23 +5,25 @@ Lightweight Python framework for defining spreadsheet-style data models (Sheets)
 
 Key features
 ------------
+
 - Define data schemas as `Sheet` subclasses composed of `Column` and `Formula` members.
 - Build formula expressions using Python operators (`+`, `-`, `*`, `/`) on column references.
 - Automatic dependency graph generation and execution ordering for formula evaluation.
-- Pluggable backend system (example: Excel backend using `openpyxl`).
+- Pluggable data source system (example: Excel data source using `openpyxl`).
 - Synchronization engine with external data sources, like Postgres or SQLite.
 
 Project modules
 ---------------
+
 The framework is divided into many small modules to separate features and responsibilities.
 
 - `core`: The fundamental pillars of the library are located here. It contains the main structures and functionalities of the framework.
-- `backends`: The backends for different spreadsheet platforms, like Excel and Google Sheets.
 - `engine`: The synchronization engine that allows the information of spreadsheets to be sent to external data sources.
 - `cli`: The command-line tools to use the Nitrogen framework as executable.
 
 Installation
 ------------
+
 Install from source (recommended for development) or add as a dependency in your project:
 
 ```bash
@@ -33,49 +34,46 @@ Requirements are declared in [pyproject.toml](pyproject.toml#L1-L40). Nitrogen d
 
 Quick start
 -----------
+
 Create a `Sheet` by subclassing `nitrogen.Sheet`, declare `Column` fields and `Formula` fields composed from column references:
 
 ```python
-import openpyxl
-import nitrogen as nt
-from nitrogen.backends.excel.backend import ExcelBackend
+import nitrogen.core as nt
+import nitrogen.engine as nte
+from typing import Literal
 
-class Products(nt.Sheet):
-	quantity = nt.Column(int)
-	price = nt.Column(float)
-	total = nt.Formula(quantity * price)
+class Users(nt.Sheet):
+    type Role = Literal["visitant", "member", "admin"]
 
-# insert rows
-Products.insert(quantity=2, price=3.5)
-Products.insert(quantity=10, price=1.2)
+    id = nt.Column(int)
+    name = nt.Column(str)
+    email = nt.Column(str)
+    role = nt.Column(type[Role])
 
-# write to an Excel workbook using the provided backend
-wb = openpyxl.Workbook()
-backend = ExcelBackend(wb)
-from nitrogen.core.workbook import Workbook as NitrogenWorkbook
-nwb = NitrogenWorkbook()
-nwb.add(Products)
-nwb.sync(backend, path="products.xlsx")
+workbook = nt.Workbook()
+source = nte.ExcelDataSource("excel_sample.xlsx")
+engine = nte.WorkbookEngine(source)
+
+Users.insert(id=1, name="john", email="johnnymail@hotmail.com", role="member")
+Users.insert(id=2, name="anna", email="annagirlly@hotmail.com", role="admin")
+
+workbook.add_sheet(Users)
+engine.save(workbook)
 ```
-
-API & internals
----------------
-- Sheet metaclass and schema: [src/nitrogen/core/sheet.py](src/nitrogen/core/sheet.py#L1-L200)
-- Column and Formula primitives: [src/nitrogen/core/column.py](src/nitrogen/core/column.py#L1-L200), [src/nitrogen/core/formula.py](src/nitrogen/core/formula.py#L1-L200)
-- Expression system and arithmetic operators: [src/nitrogen/core/expressions](src/nitrogen/core/expressions/references.py#L1-L200)
-- Excel backend and compiler example: [src/nitrogen/backends/excel/backend.py](src/nitrogen/backends/excel/backend.py#L1-L300), [src/nitrogen/backends/excel/compiler.py](src/nitrogen/backends/excel/compiler.py#L1-L200)
 
 Testing
 -------
+
 Run the test suite with `pytest`:
 
 ```bash
-python -m pip install -r requirements-dev.txt  # if you maintain dev deps
+python -m pip install -r requirements.txt  # if you maintain dev deps
 pytest -q
 ```
 
 Project status & contribution
 -----------------------------
+
 This repository is an early-stage implementation. Contributions, bug reports and feature requests are welcome. To contribute:
 
 1. Open an issue describing the desired change.
@@ -83,5 +81,5 @@ This repository is an early-stage implementation. Contributions, bug reports and
 
 License
 -------
-See the repository LICENSE file.
 
+See the repository LICENSE file.

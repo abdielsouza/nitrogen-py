@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Any
 
 from .query import Query
+from .contexts import CompilationContext
 
 class DataSource(ABC):
     @abstractmethod
@@ -15,4 +16,9 @@ class DataSource(ABC):
         :returns: Anything.
         :rtype: Any
         """
+        pass
+
+    @property
+    @abstractmethod
+    def context(self) -> CompilationContext:
         pass
