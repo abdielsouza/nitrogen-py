@@ -1,0 +1,16 @@
+[package]
+name = "ntcore"
+version = "0.1.0"
+description = "Nitrogen core engine implemented in Rust with PyO3"
+edition = "2021"
+
+[lib]
+name = "ntcore"
+crate-type = ["cdylib"]
+
+[build-dependencies]
+built = { version = "0.7", features = ["chrono"] }
+pyo3-built = "0.6"
+
+[dependencies]
+pyo3 = { version = "0.29.0", features = ["extension-module"] }
