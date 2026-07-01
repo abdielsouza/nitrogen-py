@@ -1,15 +1,15 @@
+from typing import Any, Callable
+
 from nitrogen.engine.compiler import QueryCompiler
 from nitrogen.engine.contexts import GoogleSheetsContext
 from nitrogen.engine.query import (
-    FetchQuery,
-    InsertQuery,
-    UpdateQuery,
     DeleteQuery,
+    FetchQuery,
     Filter,
+    InsertQuery,
     Operator,
+    UpdateQuery,
 )
-from typing import Callable, Any, cast
-from collections import defaultdict
 
 
 class GoogleSheetsCompiler(QueryCompiler[GoogleSheetsContext]):
@@ -30,23 +30,32 @@ class GoogleSheetsCompiler(QueryCompiler[GoogleSheetsContext]):
 
         for filter_ in query.filters:
             predicate = self._compile_filter(filter_)
-            records = list(filter(predicate, records))
+            records = [record for record in records if predicate(record)]
 
         if query.fields:
             records = [{k: record[k] for k in query.fields if k in record} for record in records]
 
         if query.order_by:
-            records.sort(key=lambda r: r[query.order_by])
+            records.sort(key=lambda r: r.get(query.order_by))
 
         return records
 
     def _compile_insert(self, query: InsertQuery, worksheet):
         headers = worksheet.row_values(1)
+
+        if not headers:
+            headers = list(query.registry.keys())
+            worksheet.insert_row(headers, index=1)
+
         row = [query.registry.get(str(column)) for column in headers]
         worksheet.append_row(row)
 
     def _compile_update(self, query: UpdateQuery, worksheet):
         headers = worksheet.row_values(1)
+
+        if not headers:
+            return
+
         records = worksheet.get_all_records()
 
         for index, record in enumerate(records, start=2):
@@ -56,9 +65,13 @@ class GoogleSheetsCompiler(QueryCompiler[GoogleSheetsContext]):
                         worksheet.update_cell(index, i + 1, query.registry[str(column)])
 
     def _compile_delete(self, query: DeleteQuery, worksheet):
+        headers = worksheet.row_values(1)
+
+        if not headers:
+            return
+
         records = worksheet.get_all_records()
         rows_to_delete = []
-        headers = worksheet.row_values(1)
 
         for index, record in enumerate(records, start=2):
             if all(self._compile_filter(f)(record) for f in query.filters):
@@ -68,16 +81,21 @@ class GoogleSheetsCompiler(QueryCompiler[GoogleSheetsContext]):
             worksheet.delete_rows(index)
 
     def _compile_filter(self, filter: Filter) -> Callable[[dict[str, Any]], bool]:
+        def resolve(record):
+            return record.get(filter.field)
+
         match filter.operator:
             case Operator.EQ:
-                return lambda r: r[filter.field] == filter.value
+                return lambda r: resolve(r) == filter.value
             case Operator.GT:
-                return lambda r: r[filter.field] > filter.value
+                return lambda r: resolve(r) is not None and resolve(r) > filter.value
             case Operator.LT:
-                return lambda r: r[filter.field] < filter.value
+                return lambda r: resolve(r) is not None and resolve(r) < filter.value
             case Operator.GTE:
-                return lambda r: r[filter.field] >= filter.value
+                return lambda r: resolve(r) is not None and resolve(r) >= filter.value
             case Operator.LTE:
-                return lambda r: r[filter.field] <= filter.value
+                return lambda r: resolve(r) is not None and resolve(r) <= filter.value
+            case Operator.CONTAINS:
+                return lambda r: filter.value in (resolve(r) or "")
             case _:
                 raise ValueError("unsupported operator")

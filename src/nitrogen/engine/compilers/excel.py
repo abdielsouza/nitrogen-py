@@ -1,16 +1,17 @@
+from collections import defaultdict
+from typing import Any, Callable, cast
+
 from nitrogen.engine.compiler import QueryCompiler
 from nitrogen.engine.contexts import ExcelContext
 from nitrogen.engine.query import (
-    FetchQuery,
-    InsertQuery,
-    UpdateQuery,
     DeleteQuery,
+    FetchQuery,
     Filter,
+    InsertQuery,
     Operator,
+    UpdateQuery,
 )
 from openpyxl.worksheet.worksheet import Worksheet
-from typing import Callable, Any, cast
-from collections import defaultdict
 
 class ExcelCompiler(QueryCompiler[ExcelContext]):
     def compile(self, query, context):
@@ -20,6 +21,8 @@ class ExcelCompiler(QueryCompiler[ExcelContext]):
             return self._compile_insert(query, context.worksheet)
         elif isinstance(query, UpdateQuery):
             return self._compile_update(query, context.worksheet)
+        elif isinstance(query, DeleteQuery):
+            return self._compile_delete(query, context.worksheet)
         else:
             raise ValueError("unsupported query type")
     
@@ -38,29 +41,31 @@ class ExcelCompiler(QueryCompiler[ExcelContext]):
         
         for filter_ in query.filters:
             predicate = self._compile_filter(filter_)
-            records = list(filter(predicate, records))
+            records = [record for record in records if predicate(record)]
         
         if query.fields:
             records = [{k: record[k] for k in query.fields if k in record} for record in records]
         
         if query.order_by:
             order_by = query.order_by
-            records.sort(key=lambda r: r[order_by])
+            records.sort(key=lambda r: r.get(order_by))
         
         return records
 
     def _compile_insert(self, query: InsertQuery, worksheet: Worksheet):
-        headers = [
-            cell.value for cell in worksheet[1]
-        ]
+        if worksheet.max_row == 0:
+            headers = list(query.registry.keys())
+            worksheet.append(headers)
+        else:
+            headers = [cell.value for cell in worksheet[1]]
 
-        row = [
-            query.registry.get(str(column)) for column in headers
-        ]
-
+        row = [query.registry.get(str(column)) for column in headers]
         worksheet.append(row)
 
     def _compile_update(self, query: UpdateQuery, worksheet: Worksheet):
+        if worksheet.max_row < 1:
+            return
+
         headers = [cell.value for cell in worksheet[1]]
 
         for row in worksheet.iter_rows(min_row=2):
@@ -73,11 +78,14 @@ class ExcelCompiler(QueryCompiler[ExcelContext]):
                         row[i].value = query.registry[str(column)]
     
     def _compile_delete(self, query: DeleteQuery, worksheet: Worksheet):
-        rows_to_delete = []
+        if worksheet.max_row < 1:
+            return
+
         headers = [cell.value for cell in worksheet[1]]
+        rows_to_delete = []
 
         for index, row in enumerate(worksheet.iter_rows(min_row=2), start=2):
-            record = {headers[i]: row[i] for i in range(len(headers))}
+            record = {headers[i]: row[i].value for i in range(len(headers))}
             record = cast(dict[str, Any], record)
 
             if all(self._compile_filter(f)(record) for f in query.filters):
@@ -87,22 +95,22 @@ class ExcelCompiler(QueryCompiler[ExcelContext]):
             worksheet.delete_rows(index)
     
     def _compile_filter(self, filter: Filter) -> Callable[[dict[str, Any]], bool]:
+        def resolve(record):
+            return record.get(filter.field)
+
         match filter.operator:
             case Operator.EQ:
-                return lambda r: r[filter.field] == filter.value
-            
+                return lambda r: resolve(r) == filter.value
             case Operator.GT:
-                return lambda r: r[filter.field] > filter.value
-            
+                return lambda r: resolve(r) is not None and resolve(r) > filter.value
             case Operator.LT:
-                return lambda r: r[filter.field] < filter.value
-            
+                return lambda r: resolve(r) is not None and resolve(r) < filter.value
             case Operator.GTE:
-                return lambda r: r[filter.field] >= filter.value
-            
+                return lambda r: resolve(r) is not None and resolve(r) >= filter.value
             case Operator.LTE:
-                return lambda r: r[filter.field] <= filter.value
-            
+                return lambda r: resolve(r) is not None and resolve(r) <= filter.value
+            case Operator.CONTAINS:
+                return lambda r: filter.value in (resolve(r) or "")
             case _:
                 raise ValueError("unsupported operator")
     

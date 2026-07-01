@@ -1,9 +1,12 @@
 from abc import ABC, abstractmethod
-from .query import Query
-from .contexts import CompilationContext
-from typing import Any
+from typing import Any, Generic, TypeVar
 
-class QueryCompiler[T: CompilationContext](ABC):
+from .contexts import CompilationContext
+from .query import Query
+
+T = TypeVar("T", bound=CompilationContext)
+
+class QueryCompiler(ABC, Generic[T]):
     """
     The query compiler is responsible for processing the query
     and return the compilation result.
@@ -25,3 +28,4 @@ class QueryCompiler[T: CompilationContext](ABC):
         :returns: The result of the query compilation. It can be anything.
         :rtype: Any
         """
+        pass

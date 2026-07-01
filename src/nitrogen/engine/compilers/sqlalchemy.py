@@ -1,7 +1,14 @@
 import sqlalchemy as sql
-from nitrogen.engine.query import *
 from nitrogen.engine.compiler import QueryCompiler
 from nitrogen.engine.contexts import SQLAlchemyContext
+from nitrogen.engine.query import (
+    DeleteQuery,
+    FetchQuery,
+    Filter,
+    InsertQuery,
+    Operator,
+    UpdateQuery,
+)
 
 class SQLAlchemyCompiler(QueryCompiler[SQLAlchemyContext]):
     def compile(self, query, context):
@@ -17,22 +24,22 @@ class SQLAlchemyCompiler(QueryCompiler[SQLAlchemyContext]):
             raise ValueError("unsupported query instance")
 
     def _compile_fetch(self, query: FetchQuery, table: sql.Table):
-        stmt = sql.select(table)
+        columns = [getattr(table.c, field) for field in query.fields] if query.fields else [table]
+        stmt = sql.select(*columns)
 
         for filter in query.filters:
             stmt = stmt.where(self._compile_filter(table, filter))
         
         if query.order_by is not None:
-            stmt = stmt.order_by(query.order_by)
+            stmt = stmt.order_by(getattr(table.c, query.order_by))
         
         if query.group_by is not None:
-            stmt = stmt.group_by(query.group_by)
+            stmt = stmt.group_by(getattr(table.c, query.group_by))
         
         return stmt
     
     def _compile_insert(self, query: InsertQuery, table: sql.Table):
-        stmt = sql.insert(table).values(query.registry)
-        return stmt
+        return sql.insert(table).values(query.registry)
 
     def _compile_update(self, query: UpdateQuery, table: sql.Table):
         stmt = sql.update(table)
@@ -40,9 +47,7 @@ class SQLAlchemyCompiler(QueryCompiler[SQLAlchemyContext]):
         for filter in query.filters:
             stmt = stmt.where(self._compile_filter(table, filter))
 
-        stmt = stmt.values(query.registry)
-
-        return stmt
+        return stmt.values(query.registry)
 
     def _compile_delete(self, query: DeleteQuery, table: sql.Table):
         stmt = sql.delete(table)
@@ -58,18 +63,13 @@ class SQLAlchemyCompiler(QueryCompiler[SQLAlchemyContext]):
         match filter.operator:
             case Operator.EQ:
                 return column == filter.value
-            
             case Operator.GT:
                 return column > filter.value
-            
             case Operator.LT:
                 return column < filter.value
-            
             case Operator.GTE:
                 return column >= filter.value
-            
             case Operator.LTE:
                 return column <= filter.value
-            
             case _:
                 raise ValueError("unsupported operator")

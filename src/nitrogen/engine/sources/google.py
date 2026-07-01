@@ -1,7 +1,7 @@
 from nitrogen.engine.source import DataSource
 from nitrogen.engine.contexts import GoogleSheetsContext
 from nitrogen.engine.compilers.google import GoogleSheetsCompiler
-from nitrogen.engine.query import Query
+from nitrogen.engine.query import FetchQuery, Query
 from typing import cast, Any
 import gspread
 
@@ -22,10 +22,18 @@ class GoogleSheetsSource(DataSource):
         self._compiler = GoogleSheetsCompiler()
 
     def execute(self, query: Query) -> Any:
+        spreadsheet = self._client.open_by_key(self._spreadsheet_id)
         self._context.spreadsheet_id = self._spreadsheet_id
-        self._context.spreadsheet = self._client.open_by_key(self._spreadsheet_id)
-        self._context.worksheet = self._context.spreadsheet.worksheet(query.sheet)
+        self._context.spreadsheet = spreadsheet
 
+        try:
+            worksheet = spreadsheet.worksheet(query.sheet)
+        except gspread.WorksheetNotFound:
+            if isinstance(query, FetchQuery):
+                return []
+            worksheet = spreadsheet.add_worksheet(title=query.sheet, rows=1000, cols=26)
+
+        self._context.worksheet = worksheet
         result = self._compiler.compile(query, self._context)
         result = cast(Any, result)
 

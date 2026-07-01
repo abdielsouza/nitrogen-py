@@ -68,7 +68,7 @@ Run the test suite with `pytest`:
 
 ```bash
 python -m pip install -r requirements.txt  # if you maintain dev deps
-pytest -q
+uv run pytest -q
 ```
 
 Project status & contribution

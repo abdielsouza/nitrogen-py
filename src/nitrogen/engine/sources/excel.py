@@ -1,9 +1,11 @@
-from nitrogen.engine.source import DataSource
-from nitrogen.engine.contexts import ExcelContext
-from nitrogen.engine.compilers.excel import ExcelCompiler
 from typing import cast, Any
 import openpyxl as xl
 import os
+
+from nitrogen.engine.compilers.excel import ExcelCompiler
+from nitrogen.engine.contexts import ExcelContext
+from nitrogen.engine.query import FetchQuery
+from nitrogen.engine.source import DataSource
 
 class ExcelDataSource(DataSource):
     """Implementation of Excel data source."""
@@ -19,10 +21,17 @@ class ExcelDataSource(DataSource):
         self._filepath = filepath
 
     def execute(self, query):
-        self._context.worksheet = self._workbook[query.sheet]
+        if query.sheet not in self._workbook.sheetnames:
+            self._workbook.create_sheet(query.sheet)
+
+        worksheet = self._workbook[query.sheet]
+        self._context.worksheet = worksheet
         result = self._compiler.compile(query, self._context)
         result = cast(Any, result)
-        
+
+        if not isinstance(query, FetchQuery):
+            self._workbook.save(self._filepath)
+
         return result
     
     @property
